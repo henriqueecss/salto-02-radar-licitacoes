@@ -1,0 +1,58 @@
+name: Radar diario
+
+on:
+  schedule:
+    # 8h em Brasilia (UTC-3), segunda a sexta
+    - cron: "0 11 * * 1-5"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: radar
+  cancel-in-progress: false
+
+jobs:
+  radar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+
+      - name: Restaura o estado da branch state
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git fetch --depth 1 origin state; then
+            git worktree add -B state state FETCH_HEAD
+          else
+            git worktree add --orphan -b state state
+          fi
+
+      - name: Roda o radar
+        run: npm start
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          RADAR_UF: ${{ vars.RADAR_UF }}
+          RADAR_VALOR_MINIMO: ${{ vars.RADAR_VALOR_MINIMO }}
+          RADAR_VALOR_MAXIMO: ${{ vars.RADAR_VALOR_MAXIMO }}
+          RADAR_MODALIDADES: ${{ vars.RADAR_MODALIDADES }}
+          RADAR_DB_PATH: state/radar.db
+
+      - name: Salva o estado
+        working-directory: state
+        run: |
+          git add radar.db
+          if git diff --cached --quiet; then
+            echo "estado sem alteracoes"
+          else
+            git commit -m "Estado de $(date -u +%Y-%m-%d)"
+            git push origin state
+          fi

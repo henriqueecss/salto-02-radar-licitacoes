@@ -10,6 +10,8 @@ const retry = (o: Partial<RetryOptions> = {}): RetryOptions => ({
   timeoutMs: 1000,
   maxAttempts: 4,
   baseDelayMs: 1000,
+  rateLimitDelayMs: 10_000,
+  pageDelayMs: 0,
   ...noSleep,
   ...o,
 });
@@ -21,13 +23,13 @@ describe("fetchWithRetry", () => {
     expect(fetchFn).toHaveBeenCalledTimes(1);
   });
 
-  it("repete em 5xx, 429 e erro de rede, com backoff crescente", async () => {
+  it("repete em 5xx e erro de rede, com backoff crescente", async () => {
     const sleep = vi.fn(async () => {});
     const fetchFn = vi
       .fn<typeof fetch>()
       .mockResolvedValueOnce(json({}, 503))
-      .mockResolvedValueOnce(json({}, 429))
       .mockRejectedValueOnce(new TypeError("fetch failed"))
+      .mockResolvedValueOnce(json({}, 500))
       .mockResolvedValueOnce(json({ ok: 1 }));
     await expect(fetchWithRetry("http://x", fetchFn, retry({ sleep }))).resolves.toEqual({ ok: 1 });
     expect(fetchFn).toHaveBeenCalledTimes(4);
@@ -36,6 +38,31 @@ describe("fetchWithRetry", () => {
     expect(delays[0]).toBeGreaterThanOrEqual(1000);
     expect(delays[1]).toBeGreaterThanOrEqual(2000);
     expect(delays[2]).toBeGreaterThanOrEqual(4000);
+  });
+
+  it("no 429 respeita o header Retry-After", async () => {
+    const sleep = vi.fn(async () => {});
+    const fetchFn = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(new Response(null, { status: 429, headers: { "retry-after": "7" } }))
+      .mockResolvedValueOnce(json({ ok: 1 }));
+    await expect(fetchWithRetry("http://x", fetchFn, retry({ sleep }))).resolves.toEqual({ ok: 1 });
+    expect(sleep).toHaveBeenCalledWith(7000);
+  });
+
+  it("no 429 sem Retry-After espera bem mais que numa falha comum", async () => {
+    const sleep = vi.fn(async () => {});
+    const fetchFn = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(json({}, 429))
+      .mockResolvedValueOnce(json({}, 429))
+      .mockResolvedValueOnce(json({ ok: 1 }));
+    await expect(fetchWithRetry("http://x", fetchFn, retry({ sleep, rateLimitDelayMs: 10_000 }))).resolves.toEqual({
+      ok: 1,
+    });
+    const delays = sleep.mock.calls.map((c: unknown[]) => c[0] as number);
+    expect(delays[0]).toBeGreaterThanOrEqual(10_000);
+    expect(delays[1]).toBeGreaterThanOrEqual(20_000);
   });
 
   it("repete quando a requisicao estoura o timeout", async () => {
@@ -105,6 +132,23 @@ describe("fetchOpenContratacoes", () => {
       expect(u.searchParams.get("tamanhoPagina")).toBe("50");
       expect(u.searchParams.get("dataFinal")).toBe("20271023");
     }
+  });
+
+  it("pausa entre paginas para nao disparar o limite de taxa", async () => {
+    const sleep = vi.fn(async () => {});
+    const fetchFn = vi.fn(async (input: string | URL | Request) => {
+      const page = new URL(String(input)).searchParams.get("pagina");
+      return json(page === "1" ? { ...p1, totalPaginas: 2, paginasRestantes: 1 } : p2);
+    });
+    await fetchOpenContratacoes({
+      uf: "MG",
+      modalidades: [6],
+      dataFinal: "20271023",
+      fetchFn,
+      retry: retry({ sleep, pageDelayMs: 1000 }),
+    });
+    expect(sleep).toHaveBeenCalledTimes(1);
+    expect(sleep).toHaveBeenCalledWith(1000);
   });
 
   it("falha a coleta inteira se uma pagina falhar de vez", async () => {

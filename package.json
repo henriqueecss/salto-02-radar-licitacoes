@@ -13,7 +13,8 @@
     "test:watch": "vitest",
     "lint": "eslint . && tsc --noEmit",
     "evaluate": "tsx scripts/evaluate.ts",
-    "record-fixtures": "tsx scripts/record-fixtures.ts"
+    "record-fixtures": "tsx scripts/record-fixtures.ts",
+    "sample-real-day": "tsx scripts/sample-real-day.ts"
   },
   "devDependencies": {
     "@types/node": "^22.20.5",
