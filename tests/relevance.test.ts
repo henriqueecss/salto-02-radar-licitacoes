@@ -1,3 +1,6 @@
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { computeMetrics, loadLabeledCsv } from "../src/eval.ts";
 import { isRelevant, scoreRelevance } from "../src/filter/relevance.ts";
@@ -94,6 +97,16 @@ describe("scoreRelevance", () => {
 
   it("ignora acentos e caixa", () => {
     expect(scoreRelevance("SÍTIO ELETRÔNICO").score).toBe(scoreRelevance("sitio eletronico").score);
+  });
+});
+
+describe("loadLabeledCsv", () => {
+  it("recusa linha sem rotulo em vez de contar como nao relevante", () => {
+    const dir = mkdtempSync(join(tmpdir(), "radar-"));
+    const path = join(dir, "amostra.csv");
+    writeFileSync(path, "id;objeto;relevante;link\nA1;Sistema web;sim;x\nA2;Pneus;;x\n");
+    expect(() => loadLabeledCsv(path)).toThrow(/A2/);
+    rmSync(dir, { recursive: true, force: true });
   });
 });
 

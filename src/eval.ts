@@ -6,7 +6,11 @@ export function loadLabeledCsv(path: string): LabeledRow[] {
   const [, ...lines] = readFileSync(path, "utf8").split(/\r?\n/).filter((l) => l.trim() !== "");
   return lines.map((line) => {
     const [id = "", objeto = "", relevante = ""] = line.split(";");
-    return { id, objeto, relevante: relevante.trim() === "sim" };
+    const label = relevante.trim().toLowerCase();
+    if (label !== "sim" && label !== "não" && label !== "nao") {
+      throw new Error(`${id}: coluna relevante deve ser sim ou não, veio "${relevante}"`);
+    }
+    return { id, objeto, relevante: label === "sim" };
   });
 }
 
