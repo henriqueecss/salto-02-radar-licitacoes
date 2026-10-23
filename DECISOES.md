@@ -77,6 +77,40 @@ Um edital é aprovado com 3 pontos ou mais. A pontuação também ordena o resum
 
 **Descartada:** uma mensagem por edital. Daria para encaminhar cada edital sozinho, mas num dia cheio vira enxurrada e esbarra no limite de envio do Telegram.
 
+## 6. LLM como segunda etapa do filtro
+
+**Escolha:** as regras continuam como primeira peneira, e um LLM gratuito julga os editais que elas aprovaram **e** os que elas rejeitaram mas têm vocabulário de TI (sistema, software, site, plataforma...). A decisão final é do LLM; sem veredito, vale a regra. O provedor é o Groq com o modelo `qwen/qwen3.8-27b`, chamado pela API `/chat/completions` no formato da OpenAI com o `fetch` nativo, sem dependência nova.
+
+**Por quê:** num dia real, as regras sozinhas aprovaram gestão de frota por cartão (o texto citava "aplicativos móveis") e não tinham como avaliar textos que não usam os termos fortes. Uma lista de palavras não entende o contexto, e um modelo de linguagem entende. Mandar também os rejeitados com vocabulário de TI deixa o LLM **recuperar recall**, e não só melhorar a precisão.
+
+**Como cabe no plano gratuito** (limites medidos nos cabeçalhos da resposta em 23/10/2026: 1.000 requisições por dia, 8.000 tokens por minuto e, no `qwen`, só 1.000 tokens de **saída** por minuto):
+- **lotes de 20 editais por chamada**, com JSON compacto e motivo de até 8 palavras: cerca de 27 tokens de saída por edital;
+- **um lote por minuto**, com teto de 800 tokens de saída por pedido. Sem esse teto, o Groq estima a saída pelo pior caso e recusa o pedido antes de rodar;
+- **cada edital é julgado uma vez só**: o veredito fica na tabela `classificacoes` do SQLite, e um edital que continua aberto no dia seguinte não gasta outra chamada;
+- **no máximo 200 editais por execução**, com os aprovados pelas regras primeiro. O primeiro dia tem cerca de 340 candidatos, então o resto fica para o dia seguinte. Dali em diante entram só algumas dezenas por dia.
+
+**Falhas:** chave inválida, cota esgotada ou API fora interrompem a classificação, e os editais ficam com a decisão das regras. Um `Retry-After` acima de 2 minutos é tratado como cota esgotada, e o job não fica dormindo. JSON inválido (o Groq devolve 400 `json_validate_failed`) perde só aquele lote. O LLM nunca derruba o job nem faz um edital sumir.
+
+**Perfil:** serviço de sistema ou plataforma digital **conta** como oportunidade quando o texto não pede licença, locação ou cessão de uso de um produto pronto. A empresa pode construir e operar a solução (por exemplo, a bilheteria da vaquejada de Januária e o sistema do cemitério de Andrelândia na amostra real). Licença e cessão de uso de software pronto continuam fora.
+
+**Modelos comparados** no conjunto real de 20 editais, mesmo prompt:
+
+| Modelo | Resultado |
+|---|---|
+| `openai/gpt-oss-120b` | instável: precisão de 80%, 66,7% e 100% em três execuções iguais. Errou "sistema de registro de preços" de peças automotivas e a frota por cartão |
+| `openai/gpt-oss-20b` | o Groq recusou o lote por JSON inválido (`json_validate_failed`) |
+| `qwen/qwen3.8-27b` | 100% de recall e de precisão em todas as execuções, nos dois conjuntos, com lotes de 10 e de 20 |
+
+**Teste completo num dia real (23/10/2026, sem enviar):** 3.066 contratações coletadas, 355 candidatas ao LLM, 200 julgadas sem falha (dois 429 absorvidos pelo retry) e 155 adiadas, como previsto. A frota por cartão saiu do resumo. Um erro apareceu: um edital de geotecnologia foi aprovado com o motivo "Licenciamento de sistemas web e mobile", o que contradiz o prompt. Esse erro vai para a próxima amostra rotulada, e não para um ajuste feito às pressas no prompt.
+
+**Descartadas:**
+- API paga (Anthropic, OpenAI): melhor qualidade e limites folgados, mas a empresa quer custo zero.
+- Gemini gratuito: em 2026 o Google cortou o plano grátis e tirou os limites da documentação. É instável demais para um job diário.
+- GitHub Models: usaria o próprio `GITHUB_TOKEN` no Actions, mas os limites são pouco documentados. Fica como alternativa, e a troca é só mudar `LLM_BASE_URL` e `LLM_MODEL`.
+- Modelo local (Ollama) no runner: só caberia um modelo pequeno rodando em CPU, lento e fraco para esse julgamento.
+- Um edital por chamada: 340 chamadas no primeiro dia e o limite de tokens por minuto estourado.
+- LLM só nos aprovados pelas regras: mais barato, mas não recupera nenhum edital que as regras perderam.
+
 ## Outras decisões
 
 - **Prazo de mentira:** quando abertura e encerramento caem em 31/12 do mesmo dia, o prazo é tratado como "a confirmar no edital", e não como data real. Prazo ausente ou suspeito nunca exclui um edital.
