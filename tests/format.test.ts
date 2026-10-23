@@ -58,6 +58,13 @@ describe("buildMessages", () => {
     expect(msg).toContain("encerra em breve");
   });
 
+  it("mostra o motivo do LLM quando houver", () => {
+    const [msg] = buildMessages([{ ...item(1), motivo: "Desenvolvimento de <site> institucional" }], now);
+    expect(msg).toContain("Motivo: Desenvolvimento de &lt;site&gt; institucional");
+    const [semMotivo] = buildMessages([item(1)], now);
+    expect(semMotivo).not.toContain("Motivo:");
+  });
+
   it("escapa HTML vindo do objeto", () => {
     const [msg] = buildMessages([item(1, { objetoCompra: "Sistema <web> & app" })], now);
     expect(msg).toContain("Sistema &lt;web&gt; &amp; app");

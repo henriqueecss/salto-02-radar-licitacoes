@@ -52,6 +52,37 @@ describe("store", () => {
     store.close();
   });
 
+  it("guarda a classificacao do LLM e devolve so a dos ids pedidos", () => {
+    const store = openStore(":memory:");
+    store.saveVerdicts(
+      new Map([
+        ["a", { relevante: true, motivo: "site" }],
+        ["b", { relevante: false, motivo: "pneu" }],
+      ]),
+      "modelo-x",
+      new Date("2026-10-23T11:00:00Z"),
+    );
+    const cached = store.getVerdicts(["b", "c"]);
+    expect([...cached.entries()]).toEqual([["b", { relevante: false, motivo: "pneu" }]]);
+    store.close();
+  });
+
+  it("classificacao sobrevive entre execucoes e pode ser sobrescrita", () => {
+    const dir = mkdtempSync(join(tmpdir(), "radar-"));
+    dirs.push(dir);
+    const path = join(dir, "radar.db");
+    const at = new Date("2026-10-23T11:00:00Z");
+
+    const first = openStore(path);
+    first.saveVerdicts(new Map([["a", { relevante: false, motivo: "v1" }]]), "m", at);
+    first.close();
+
+    const second = openStore(path);
+    second.saveVerdicts(new Map([["a", { relevante: true, motivo: "v2" }]]), "m", at);
+    expect(second.getVerdicts(["a"]).get("a")).toEqual({ relevante: true, motivo: "v2" });
+    second.close();
+  });
+
   it("deduplica repeticoes dentro da mesma coleta", () => {
     const store = openStore(":memory:");
     expect(store.filterUnseen([edital(1), edital(1)])).toHaveLength(1);

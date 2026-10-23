@@ -1,5 +1,6 @@
 import { existsSync } from "node:fs";
 import { loadConfig } from "./config.ts";
+import { classifyAll } from "./llm/classify.ts";
 import { runRadar } from "./pipeline.ts";
 import { fetchOpenContratacoes } from "./pncp/client.ts";
 import { openStore } from "./store/db.ts";
@@ -9,6 +10,7 @@ if (existsSync(".env")) process.loadEnvFile(".env");
 
 const config = loadConfig(process.env);
 const store = openStore(config.dbPath);
+const llm = config.llm;
 
 try {
   const result = await runRadar({
@@ -21,6 +23,7 @@ try {
     store,
     log: console.log,
     dryRun: config.dryRun,
+    llm: llm ? { model: llm.model, classify: (items) => classifyAll(items, { config: llm, log: console.log }) } : undefined,
   });
   console.log(`concluido: ${result.novos} edital(is) novo(s) enviado(s)`);
 } finally {

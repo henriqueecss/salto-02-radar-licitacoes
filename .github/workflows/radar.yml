@@ -45,6 +45,9 @@ jobs:
           RADAR_VALOR_MAXIMO: ${{ vars.RADAR_VALOR_MAXIMO }}
           RADAR_MODALIDADES: ${{ vars.RADAR_MODALIDADES }}
           RADAR_DB_PATH: state/radar.db
+          API_KEY: ${{ secrets.API_KEY }}
+          LLM_BASE_URL: ${{ vars.LLM_BASE_URL }}
+          LLM_MODEL: ${{ vars.LLM_MODEL }}
 
       - name: Salva o estado
         working-directory: state

@@ -14,6 +14,7 @@
     "lint": "eslint . && tsc --noEmit",
     "evaluate": "tsx scripts/evaluate.ts",
     "record-fixtures": "tsx scripts/record-fixtures.ts",
+    "record-llm-fixture": "tsx scripts/record-llm-fixture.ts",
     "sample-real-day": "tsx scripts/sample-real-day.ts"
   },
   "devDependencies": {

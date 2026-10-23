@@ -3,6 +3,7 @@ import type { Scored } from "../store/db.ts";
 
 export const TELEGRAM_LIMIT = 4096;
 const MAX_OBJETO = 350;
+const MAX_MOTIVO = 200;
 const URGENT_DAYS = 3;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -29,13 +30,14 @@ function formatPrazo(e: Edital, now: Date): string {
   return `Encerra: ${dateTimeFmt.format(e.encerramento).replace(",", "")}${urgent}`;
 }
 
-function formatItem({ edital: e }: Scored, index: number, now: Date): string {
+function formatItem({ edital: e, motivo }: Scored, index: number, now: Date): string {
   const valor = e.valorEstimado === null ? "sigiloso ou não informado" : money.format(e.valorEstimado);
   return [
     `<b>${index}. ${escapeHtml(truncate(e.objeto, MAX_OBJETO))}</b>`,
     `${escapeHtml(e.orgao)} · ${escapeHtml(e.municipio)}/${escapeHtml(e.uf)}`,
     `${escapeHtml(e.modalidade)} · Valor estimado: ${valor}`,
     formatPrazo(e, now),
+    ...(motivo ? [`Motivo: ${escapeHtml(truncate(motivo, MAX_MOTIVO))}`] : []),
     `<a href="${escapeHtml(e.link)}">Ver no PNCP</a>`,
   ].join("\n");
 }

@@ -1,3 +1,8 @@
+import type { LlmConfig } from "./llm/classify.ts";
+
+export const DEFAULT_LLM_BASE_URL = "https://api.groq.com/openai/v1";
+export const DEFAULT_LLM_MODEL = "qwen/qwen3.8-27b";
+
 export type Config = {
   uf: string;
   valorMin: number;
@@ -7,6 +12,8 @@ export type Config = {
   dryRun: boolean;
   telegramToken: string;
   telegramChatId: string;
+  // null: sem API_KEY, o filtro usa so as regras
+  llm: LlmConfig | null;
 };
 
 type Env = Record<string, string | undefined>;
@@ -32,6 +39,15 @@ export function loadConfig(env: Env): Config {
     throw new Error(`RADAR_MODALIDADES invalido: "${env.RADAR_MODALIDADES}"`);
   }
 
+  const apiKey = env.API_KEY?.trim() ?? "";
+  const llm = apiKey
+    ? {
+        apiKey,
+        baseUrl: (env.LLM_BASE_URL?.trim() || DEFAULT_LLM_BASE_URL).replace(/\/+$/, ""),
+        model: env.LLM_MODEL?.trim() || DEFAULT_LLM_MODEL,
+      }
+    : null;
+
   return {
     uf: (env.RADAR_UF?.trim() || "MG").toUpperCase(),
     valorMin: parseNumber(env, "RADAR_VALOR_MINIMO") ?? 0,
@@ -41,5 +57,6 @@ export function loadConfig(env: Env): Config {
     dryRun,
     telegramToken,
     telegramChatId,
+    llm,
   };
 }
