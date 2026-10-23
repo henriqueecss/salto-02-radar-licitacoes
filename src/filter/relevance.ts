@@ -4,10 +4,12 @@ type Rule = { label: string; pattern: RegExp; weight: number };
 
 // Pesos sobre texto normalizado (sem acento, minusculo).
 // Termo forte (+3) sozinho ja aprova; termo fraco (+1) so aprova somado a outros;
-// termo de exclusao (-3) indica compra fora do perfil e anula um termo forte.
+// termo de exclusao (-3) indica compra fora do perfil e anula um termo forte;
+// veto reprova sempre: software pronto fica fora mesmo com desenvolvimento junto.
 const STRONG = 3;
 const WEAK = 1;
 const EXCLUDE = -3;
+const VETO = -100;
 
 export const THRESHOLD = 3;
 
@@ -52,7 +54,6 @@ const rules: Rule[] = [
   ...[
     "aquisicao",
     "locacao",
-    "licencas?",
     "cftv",
     "videomonitoramento",
     "impressao",
@@ -79,13 +80,27 @@ const rules: Rule[] = [
     "sonorizacao",
     "radiografia",
     "e-mails?",
+    "fornecimento de (sistemas?|solucao|software|plataforma)",
+    "relogios?",
+    // gestao de frota e combustivel por cartao, contratada como servico de rede credenciada
+    "abastecimento",
+    "cartao (magnetico|microprocessado)",
   ].map((t) => ({ label: t, pattern: new RegExp(`\\b${t}\\b`), weight: EXCLUDE })),
+  ...["licenciamento", "licencas?", "saas", "software como servico", "cessao de (direito de )?uso"].map((t) => ({
+    label: t,
+    pattern: new RegExp(`\\b${t}\\b`),
+    weight: VETO,
+  })),
 ];
+
+// Alguns orgaos comecam o objeto com o nome da plataforma de disputa, como
+// "[Portal de Compras Publicas] -" ou "[LICITANET] -", que nao diz nada sobre o que se compra.
+const PLATFORM_PREFIX = /^\s*\[[^\]]*\]\s*-?\s*/;
 
 export type RelevanceResult = { score: number; hits: string[] };
 
 export function scoreRelevance(objeto: string): RelevanceResult {
-  const text = normalizeText(objeto);
+  const text = normalizeText(objeto.replace(PLATFORM_PREFIX, ""));
   let score = 0;
   const hits: string[] = [];
   for (const rule of rules) {

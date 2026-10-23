@@ -56,6 +56,29 @@ describe("armadilhas", () => {
   });
 });
 
+describe("armadilhas vistas no PNCP real (23/10/2026)", () => {
+  it.each([
+    ["licenciamento de uso", "Licenciamento de uso de sistema de gestão pública com manutenção evolutiva e corretiva"],
+    ["licenciamento com desenvolvimento junto", "Licenciamento de software de gestão em ambiente web, incluindo desenvolvimento sob demanda"],
+    ["SaaS", "Contratação de sistema web de protocolo na modalidade Software como Serviço (SaaS)"],
+    ["cessao de direito de uso", "Cessão de direito de uso de sistema informatizado de gestão escolar"],
+    ["fornecimento de sistema pronto", "Fornecimento de sistema de gestão hospitalar integrado para os municípios consorciados"],
+    ["fornecimento de solucao", "Fornecimento de solução integrada de ponto eletrônico com relógio e aplicativo"],
+    ["frota com cartao", "Gerenciamento de frota por meio de sistema informatizado com cartão magnético"],
+    ["abastecimento de combustivel", "Sistema informatizado de abastecimento de combustíveis da frota municipal"],
+    ["prefixo de plataforma de compras", "[Portal de Compras Públicas] - Manutenção do sistema de drenagem pluvial"],
+  ])("%s nao e relevante", (_caso, objeto) => {
+    expect(isRelevant(objeto)).toBe(false);
+  });
+
+  it.each([
+    ["prefixo nao atrapalha edital bom", "[LICITANET] - Desenvolvimento de portal institucional"],
+    ["sitio eletronico com hospedagem", "Prestação de serviços de sítio eletrônico e hospedagem"],
+  ])("%s", (_caso, objeto) => {
+    expect(isRelevant(objeto)).toBe(true);
+  });
+});
+
 describe("scoreRelevance", () => {
   it("explica quais termos pesaram", () => {
     const r = scoreRelevance("Contratação de fábrica de software");
