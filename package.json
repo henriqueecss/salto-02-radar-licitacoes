@@ -1,0 +1,26 @@
+{
+  "name": "radar-licitacoes",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Radar diario de licitacoes de software no PNCP com resumo no Telegram",
+  "type": "module",
+  "engines": {
+    "node": ">=22.13"
+  },
+  "scripts": {
+    "start": "tsx src/main.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint . && tsc --noEmit",
+    "evaluate": "tsx scripts/evaluate.ts",
+    "record-fixtures": "tsx scripts/record-fixtures.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "eslint": "^10.13.0",
+    "tsx": "^4.23.15",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.72.0",
+    "vitest": "^5.0.5"
+  }
+}

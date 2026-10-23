@@ -1,0 +1,14 @@
+node_modules/
+dist/
+coverage/
+.env
+*.log
+.DS_Store
+
+# arquivos internos de trabalho
+CLAUDE.md
+PROMPT_INICIAL.md
+.claude/
+
+# estado local do radar (no Actions ele vive na branch state)
+state/
