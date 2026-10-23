@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
-import { fetchOpenContratacoes, fetchWithRetry, type RetryOptions } from "../src/pncp/client.ts";
+import { fetchWithRetry, type RetryOptions } from "../src/http.ts";
+import { fetchOpenContratacoes } from "../src/pncp/client.ts";
 import { loadFixture } from "./helpers.ts";
 
 const json = (body: unknown, status = 200) =>
@@ -85,6 +86,22 @@ describe("fetchWithRetry", () => {
     const fetchFn = vi.fn(async () => json({}, 400));
     await expect(fetchWithRetry("http://x", fetchFn, retry())).rejects.toThrow(/HTTP 400/);
     expect(fetchFn).toHaveBeenCalledTimes(1);
+  });
+
+  it("no 429 com Retry-After longo demais desiste em vez de dormir", async () => {
+    const sleep = vi.fn(async () => {});
+    const fetchFn = vi.fn(async () => new Response(null, { status: 429, headers: { "retry-after": "3600" } }));
+    await expect(fetchWithRetry("http://x", fetchFn, retry({ sleep }))).rejects.toThrow(/HTTP 429/);
+    expect(fetchFn).toHaveBeenCalledTimes(1);
+    expect(sleep).not.toHaveBeenCalled();
+  });
+
+  it("repassa metodo, cabecalhos e corpo da requisicao", async () => {
+    const fetchFn = vi.fn<typeof fetch>(async () => json({ ok: 1 }));
+    const init = { method: "POST", headers: { "content-type": "application/json" }, body: "{}" };
+    await fetchWithRetry("http://x", fetchFn, retry(), init);
+    expect(fetchFn.mock.calls[0]?.[1]).toMatchObject(init);
+    expect(fetchFn.mock.calls[0]?.[1]?.signal).toBeInstanceOf(AbortSignal);
   });
 
   it("204 sem conteudo vira null", async () => {
