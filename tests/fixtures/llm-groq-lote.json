@@ -1,0 +1,61 @@
+{
+  "ids": [
+    "R01",
+    "R08",
+    "R14",
+    "I01",
+    "I04",
+    "I12"
+  ],
+  "request": {
+    "model": "qwen/qwen3.8-27b",
+    "temperature": 0,
+    "max_tokens": 800,
+    "response_format": {
+      "type": "json_object"
+    },
+    "messages": [
+      {
+        "role": "system",
+        "content": "Você classifica objetos de licitações públicas para uma pequena software house de Minas Gerais que desenvolve sites, sistemas web e aplicativos.\n\nRELEVANTE: contratos que a empresa pode executar desenvolvendo, mantendo, evoluindo ou operando software próprio: sites, portais, sistemas web, aplicativos, chatbots, lojas virtuais, painéis de dados, integrações entre sistemas, fábrica de software ou UST. Também conta a prestação de serviço de sistema ou plataforma digital quando o texto não pede licença, locação ou cessão de uso de um produto pronto, porque a empresa pode construir e operar a solução.\n\nNÃO RELEVANTE: compra de hardware; licenciamento, licença, cessão de uso ou locação de software pronto, mesmo com implantação, suporte ou desenvolvimento junto; impressão; internet e telefonia; CFTV; cabeamento; publicidade; cursos; e qualquer coisa fora de TI, mesmo que o texto use palavras como \"sistema\", \"site\", \"portal\" ou \"aplicativo\" (por exemplo, sistema de abastecimento de água ou publicação no site do diário oficial).\n\nEm caso de dúvida real, marque como relevante: perder uma oportunidade custa mais caro que ler um edital irrelevante.\n\nVocê recebe uma lista JSON de objetos, cada um com um id. Responda apenas com JSON compacto, numa linha só, no formato {\"itens\": [{\"id\": \"1\", \"relevante\": true, \"motivo\": \"até 8 palavras em português\"}]}, com exatamente um item para cada id recebido."
+      },
+      {
+        "role": "user",
+        "content": "[{\"id\":\"1\",\"objeto\":\"CONTRATAÇÃO DE EMPRESA ESPECIALIZADA PARA DESENVOLVIMENTO, HOSPEDAGEM E MANUTENÇÃO DO PORTAL INSTITUCIONAL DA PREFEITURA MUNICIPAL\"},{\"id\":\"2\",\"objeto\":\"CONTRATAÇÃO DE EMPRESA PARA ADEQUAÇÃO DO SÍTIO ELETRÔNICO OFICIAL AOS REQUISITOS DE ACESSIBILIDADE DIGITAL (EMAG)\"},{\"id\":\"3\",\"objeto\":\"CONTRATAÇÃO DE EMPRESA PARA DESENVOLVIMENTO DE SOFTWARE DE CONTROLE DE FROTA COM APLICATIVO PARA OS MOTORISTAS\"},{\"id\":\"4\",\"objeto\":\"CONTRATAÇÃO DE EMPRESA PARA AMPLIAÇÃO DO SISTEMA DE ABASTECIMENTO DE ÁGUA DO DISTRITO DE SÃO JOSÉ\"},{\"id\":\"5\",\"objeto\":\"AQUISIÇÃO DE LICENÇAS DE SOFTWARE DE ESCRITÓRIO E ANTIVÍRUS PARA OS COMPUTADORES DA SECRETARIA DE ADMINISTRAÇÃO\"},{\"id\":\"6\",\"objeto\":\"CONTRATAÇÃO DE EMPRESA PARA PUBLICAÇÃO DE ATOS OFICIAIS EM JORNAL DE GRANDE CIRCULAÇÃO E NO SITE DO DIÁRIO OFICIAL\"}]"
+      }
+    ]
+  },
+  "response": {
+    "id": "chatcmpl-dcb5268e-423f-472d-aebe-57036fc6fb8e",
+    "object": "chat.completion",
+    "created": 1792786315,
+    "model": "qwen/qwen3.8-27b",
+    "choices": [
+      {
+        "index": 0,
+        "message": {
+          "role": "assistant",
+          "content": "{\"itens\": [{\"id\": \"1\", \"relevante\": true, \"motivo\": \"Desenvolvimento e manutenção de portal\"}, {\"id\": \"2\", \"relevante\": true, \"motivo\": \"Adequação de site à acessibilidade\"}, {\"id\": \"3\", \"relevante\": true, \"motivo\": \"Desenvolvimento de software e aplicativo\"}, {\"id\": \"4\", \"relevante\": false, \"motivo\": \"Infraestrutura física de abastecimento\"}, {\"id\": \"5\", \"relevante\": false, \"motivo\": \"Aquisição de licenças de software\"}, {\"id\": \"6\", \"relevante\": false, \"motivo\": \"Publicidade e publicação de atos\"}]}"
+        },
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "usage": {
+      "queue_time": 0.201403798,
+      "prompt_tokens": 596,
+      "prompt_time": 0.049498157,
+      "completion_tokens": 160,
+      "completion_time": 0.31433295,
+      "total_tokens": 756,
+      "total_time": 0.363831107
+    },
+    "usage_breakdown": null,
+    "system_fingerprint": "fp_57c7e760a9",
+    "x_groq": {
+      "id": "req_01m5n68de1eqwb2dtbwcw2vhgx",
+      "seed": 2080133936
+    },
+    "service_tier": "on_demand"
+  }
+}

@@ -97,10 +97,23 @@ const rules: Rule[] = [
 // "[Portal de Compras Publicas] -" ou "[LICITANET] -", que nao diz nada sobre o que se compra.
 const PLATFORM_PREFIX = /^\s*\[[^\]]*\]\s*-?\s*/;
 
+export function stripPlatformPrefix(objeto: string): string {
+  return objeto.replace(PLATFORM_PREFIX, "");
+}
+
+// Vocabulario amplo de TI: e onde um edital bom que as regras perderam pode estar.
+// Quem nao tem nenhum desses termos e assumido fora do perfil.
+const IT_VOCABULARY =
+  /\b(sistemas?|software|aplicativos?|app|sites?|sitio|portal|plataforma|digital|web|online|tecnologia da informacao|informatica|informatizad[oa]s?|dados|nuvem|chatbot|dashboard|painel)\b/;
+
+export function hasItVocabulary(objeto: string): boolean {
+  return IT_VOCABULARY.test(normalizeText(stripPlatformPrefix(objeto)));
+}
+
 export type RelevanceResult = { score: number; hits: string[] };
 
 export function scoreRelevance(objeto: string): RelevanceResult {
-  const text = normalizeText(objeto.replace(PLATFORM_PREFIX, ""));
+  const text = normalizeText(stripPlatformPrefix(objeto));
   let score = 0;
   const hits: string[] = [];
   for (const rule of rules) {

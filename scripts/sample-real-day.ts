@@ -1,7 +1,6 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { rejectionReason } from "../src/filter/criteria.ts";
-import { isRelevant } from "../src/filter/relevance.ts";
-import { normalizeText } from "../src/filter/text.ts";
+import { hasItVocabulary, isRelevant } from "../src/filter/relevance.ts";
 import { fetchOpenContratacoes } from "../src/pncp/client.ts";
 import { normalizeContratacao } from "../src/pncp/normalize.ts";
 
@@ -12,10 +11,6 @@ import { normalizeContratacao } from "../src/pncp/normalize.ts";
 const SIZE_APPROVED = 10;
 const SIZE_NEAR_MISS = 10;
 const OUT = process.argv[2] ?? "avaliacao/amostra_dia_real.csv";
-
-const IT_VOCABULARY =
-  /\b(sistemas?|software|aplicativos?|app|sites?|sitio|portal|plataforma|digital|web|online|tecnologia da informacao|informatica|informatizad[oa]s?|dados|nuvem|chatbot|dashboard|painel)\b/;
-const PLATFORM_PREFIX = /^\s*\[[^\]]*\]\s*-?\s*/;
 
 const now = new Date();
 const uf = process.env.RADAR_UF || "MG";
@@ -30,9 +25,7 @@ const eligible = editais.filter((e) => {
 
 const shuffle = <T>(xs: T[]) => xs.map((x) => [Math.random(), x] as const).sort((a, b) => a[0] - b[0]).map(([, x]) => x);
 const approved = eligible.filter((e) => isRelevant(e.objeto));
-const nearMiss = eligible.filter(
-  (e) => !isRelevant(e.objeto) && IT_VOCABULARY.test(normalizeText(e.objeto.replace(PLATFORM_PREFIX, ""))),
-);
+const nearMiss = eligible.filter((e) => !isRelevant(e.objeto) && hasItVocabulary(e.objeto));
 const pickedApproved = shuffle(approved).slice(0, SIZE_APPROVED);
 const pickedNearMiss = shuffle(nearMiss).slice(0, SIZE_APPROVED + SIZE_NEAR_MISS - pickedApproved.length);
 

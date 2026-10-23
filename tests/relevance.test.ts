@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { computeMetrics, loadLabeledCsv } from "../src/eval.ts";
-import { isRelevant, scoreRelevance } from "../src/filter/relevance.ts";
+import { hasItVocabulary, isRelevant, scoreRelevance } from "../src/filter/relevance.ts";
 
 const rows = loadLabeledCsv("data/objetos_rotulados.csv");
 const byId = (id: string) => {
@@ -98,6 +98,23 @@ describe("scoreRelevance", () => {
   it("ignora acentos e caixa", () => {
     expect(scoreRelevance("SÍTIO ELETRÔNICO").score).toBe(scoreRelevance("sitio eletronico").score);
   });
+});
+
+describe("hasItVocabulary", () => {
+  it.each([
+    "Prestação de serviços para sistema de gestão de jazigos",
+    "Plataforma digital para venda de bilhetes",
+    "Licenciamento de software de gestão",
+  ])("reconhece vocabulario de TI em: %s", (objeto) => {
+    expect(hasItVocabulary(objeto)).toBe(true);
+  });
+
+  it.each(["Aquisição de pneus para a frota", "[Portal de Compras Públicas] - Hidrojateamento de redes"])(
+    "nao ve TI em: %s",
+    (objeto) => {
+      expect(hasItVocabulary(objeto)).toBe(false);
+    },
+  );
 });
 
 describe("loadLabeledCsv", () => {
