@@ -1,5 +1,7 @@
 # Radar de licitações
 
+[![CI](https://github.com/henriqueecss/salto-02-radar-licitacoes/actions/workflows/ci.yml/badge.svg)](https://github.com/henriqueecss/salto-02-radar-licitacoes/actions/workflows/ci.yml) [![Radar diario](https://github.com/henriqueecss/salto-02-radar-licitacoes/actions/workflows/radar.yml/badge.svg)](https://github.com/henriqueecss/salto-02-radar-licitacoes/actions/workflows/radar.yml) ![Licença MIT](https://img.shields.io/badge/licen%C3%A7a-MIT-blue)
+
 Job diário que consulta o Portal Nacional de Contratações Públicas (PNCP), filtra os editais de desenvolvimento de software abertos em Minas Gerais e manda um resumo no Telegram.
 
 Case 2 de 15 do meu desafio de portfólio: problemas reais resolvidos com código.
@@ -18,7 +20,7 @@ Todo dia útil, às 8h, um workflow do GitHub Actions:
 4. descarta o que já foi enviado, guardado num SQLite;
 5. decide a relevância em duas etapas: regras com pontuação, e depois um LLM gratuito (Groq) que julga o que as regras aprovaram e o que elas rejeitaram mas tem vocabulário de TI;
 6. manda um resumo diário em HTML para o Telegram, com o motivo de cada edital, dividido em partes de até 4.096 caracteres;
-7. grava o estado numa branch separada (`state`).
+7. grava o estado numa branch separada (`state`) e, se algo falhar, avisa no próprio Telegram com o link da execução.
 
 Exemplo de item no resumo:
 
@@ -159,3 +161,7 @@ Para o job agendado, cadastre `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` e `API_KE
 - Avisar quando um edital já enviado for suspenso ou revogado (a situação muda depois da publicação).
 - Uma página web com histórico e filtros, lendo o SQLite da branch `state`.
 - O GitHub desativa workflows agendados em repositórios públicos depois de 60 dias sem atividade.
+
+## Licença
+
+MIT. Veja o arquivo `LICENSE`.

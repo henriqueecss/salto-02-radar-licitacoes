@@ -2,6 +2,7 @@
   "name": "radar-licitacoes",
   "version": "0.1.0",
   "private": true,
+  "license": "MIT",
   "description": "Radar diario de licitacoes de software no PNCP com resumo no Telegram",
   "type": "module",
   "engines": {
