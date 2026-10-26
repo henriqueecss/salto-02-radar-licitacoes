@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/henriqueecss/salto-02-radar-licitacoes/actions/workflows/ci.yml/badge.svg)](https://github.com/henriqueecss/salto-02-radar-licitacoes/actions/workflows/ci.yml) [![Radar diario](https://github.com/henriqueecss/salto-02-radar-licitacoes/actions/workflows/radar.yml/badge.svg)](https://github.com/henriqueecss/salto-02-radar-licitacoes/actions/workflows/radar.yml) ![Licença MIT](https://img.shields.io/badge/licen%C3%A7a-MIT-blue)
 
-Job diário que consulta o Portal Nacional de Contratações Públicas (PNCP), filtra os editais de desenvolvimento de software abertos em Minas Gerais e manda um resumo no Telegram. Case 2 de 15 do meu desafio de portfólio.
+Job diário que consulta o Portal Nacional de Contratações Públicas (PNCP), filtra os editais de desenvolvimento de software abertos em Minas Gerais e manda um resumo no Telegram.
 
 **Em números:** numa execução real, de 3.075 editais abertos em MG o radar entregou 4. Recall de 100% nos exemplos rotulados e custo zero (GitHub Actions, SQLite e o plano gratuito do Groq).
 
