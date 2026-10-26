@@ -2,9 +2,9 @@
 
 [![CI](https://github.com/henriqueecss/salto-02-radar-licitacoes/actions/workflows/ci.yml/badge.svg)](https://github.com/henriqueecss/salto-02-radar-licitacoes/actions/workflows/ci.yml) [![Radar diario](https://github.com/henriqueecss/salto-02-radar-licitacoes/actions/workflows/radar.yml/badge.svg)](https://github.com/henriqueecss/salto-02-radar-licitacoes/actions/workflows/radar.yml) ![Licença MIT](https://img.shields.io/badge/licen%C3%A7a-MIT-blue)
 
-Job diário que consulta o Portal Nacional de Contratações Públicas (PNCP), filtra os editais de desenvolvimento de software abertos em Minas Gerais e manda um resumo no Telegram.
+Job diário que consulta o Portal Nacional de Contratações Públicas (PNCP), filtra os editais de desenvolvimento de software abertos em Minas Gerais e manda um resumo no Telegram. Case 2 de 15 do meu desafio de portfólio.
 
-Case 2 de 15 do meu desafio de portfólio: problemas reais resolvidos com código.
+**Em números:** numa execução real, de 3.075 editais abertos em MG o radar entregou 4. Recall de 100% nos exemplos rotulados e custo zero (GitHub Actions, SQLite e o plano gratuito do Groq).
 
 ## O problema
 
@@ -12,75 +12,28 @@ Uma pequena software house desenvolve sites, sistemas web e aplicativos. Prefeit
 
 ## A solução
 
-Todo dia útil, às 8h, um workflow do GitHub Actions:
+Todo dia útil, às 8h (Brasília), um workflow do GitHub Actions roda este fluxo:
 
-1. consulta o endpoint `/v1/contratacoes/proposta` do PNCP, que lista as contratações com proposta aberta, com paginação, timeout e retry;
-2. normaliza os registros (texto sujo, datas sem fuso, valor sigiloso, prazo de mentira);
-3. aplica os critérios objetivos (situação, prazo, UF e faixa de valor);
-4. descarta o que já foi enviado, guardado num SQLite;
-5. decide a relevância em duas etapas: regras com pontuação, e depois um LLM gratuito (Groq) que julga o que as regras aprovaram e o que elas rejeitaram mas tem vocabulário de TI;
-6. manda um resumo diário em HTML para o Telegram, com o motivo de cada edital, dividido em partes de até 4.096 caracteres;
-7. grava o estado numa branch separada (`state`) e, se algo falhar, avisa no próprio Telegram com o link da execução.
-
-Exemplo de item no resumo:
-
-```
-1. Contratação de empresa especializada para prestação de serviços de sítio eletrônico e serviços de hospedagem.
-SERVICO AUTONOMO DE AGUA E ESGOTO · Três Pontas/MG
-Pregão - Eletrônico · Valor estimado: R$ 19.430,00
-Encerra: 27/10/2026 08:00
-Motivo: Prestação de serviços de site
-Ver no PNCP
-```
-
-Resumo real recebido no Telegram na execução de 26/10/2026:
-
-![Resumo no Telegram, parte 1](docs/telegram-resumo-1.png)
-![Resumo no Telegram, parte 2](docs/telegram-resumo-2.png)
-
-## Arquitetura
-
-```
-GitHub Actions (cron 0 11 * * 1-5 = 8h em Brasília)
-  │
-  ├─ restaura state/radar.db da branch state
-  │
-  ├─ pncp/client.ts      GET /proposta por modalidade, página a página
-  │                      timeout 30 s, retry com backoff, pausa contra o limite de taxa
-  ├─ pncp/normalize.ts   Contratação → Edital (texto limpo, datas, link do PNCP)
-  ├─ filter/criteria.ts  situação = 1, prazo, UF, faixa de valor
-  ├─ store/db.ts         remove o que já foi enviado (node:sqlite)
-  ├─ filter/relevance.ts pontuação por termos (fortes, fracos, exclusão, veto)
-  ├─ llm/classify.ts     segunda opinião em lotes de 20, com veredito guardado no SQLite
-  ├─ telegram/format.ts  resumo em HTML, ordenado por pontuação
-  ├─ telegram/client.ts  sendMessage, respeitando retry_after
-  │
-  └─ grava o estado e faz commit na branch state (só depois do envio dar certo)
+```mermaid
+flowchart LR
+    A["PNCP<br/>/contratacoes/proposta"] --> B["Coleta e normalização<br/>paginação, timeout, retry"]
+    B --> C["Critérios objetivos<br/>situação, prazo, UF, valor"]
+    C --> D[("SQLite<br/>descarta o já enviado")]
+    D --> E["Regras com pontuação"]
+    E --> F["LLM Groq<br/>lotes de 20, com cache"]
+    F --> G["Resumo em HTML<br/>com o motivo de cada edital"]
+    G --> H["Telegram"]
+    H --> I[("Branch state<br/>grava o estado")]
+    H -. "se algo falhar" .-> J["Alerta no Telegram"]
 ```
 
 O pipeline (`src/pipeline.ts`) recebe coleta, envio e banco por injeção. Por isso o teste ponta a ponta roda sem rede, com respostas reais do PNCP gravadas em `tests/fixtures/`.
 
-```
-src/
-  config.ts          variáveis de ambiente
-  main.ts            ponto de entrada do job
-  pipeline.ts        orquestração
-  eval.ts            leitura de CSV rotulado e cálculo de recall/precisão
-  http.ts            timeout, retry e backoff, usados pelo PNCP e pelo LLM
-  pncp/              cliente do PNCP e normalização
-  filter/            texto, critérios e relevância
-  llm/               classificação por LLM (API compatível com a da OpenAI)
-  store/             SQLite
-  telegram/          formatação e envio
-scripts/
-  record-fixtures.ts grava respostas reais da API para os testes
-  evaluate.ts        mede recall e precisão num CSV rotulado (--llm para incluir o LLM)
-  record-llm-fixture.ts grava uma resposta real do LLM para os testes
-  sample-real-day.ts monta a amostra de um dia real para rotulagem manual
-tests/               Vitest, um arquivo por módulo
-data/                40 objetos rotulados (fictícios, no estilo dos reais)
-avaliacao/           amostra real rotulada manualmente
-```
+Resumo real recebido na execução de 26/10/2026:
+
+| | |
+|---|---|
+| ![Resumo no Telegram, parte 1](docs/telegram-resumo-1.png) | ![Resumo no Telegram, parte 2](docs/telegram-resumo-2.png) |
 
 ## Decisões principais
 
@@ -107,18 +60,18 @@ A meta era **recall de 100%** (nenhuma oportunidade perdida) e **precisão de pe
 | mesmos 20 editais | regras depois do ajuste | 100% (4/4) | 80% (4/5) |
 | mesmos 20 editais | regras + LLM (`qwen/qwen3.8-27b`) | 100% (4/4) | 100% (4/4) |
 
-O resultado com LLM se repetiu em quatro execuções, com lotes de 10 e de 20.
+O resultado com LLM se repetiu em quatro execuções. Como ler esses números:
 
-Num teste completo com o PNCP do mesmo dia, sem enviar nada, o LLM julgou 200 dos 355 candidatos (os outros ficaram para a execução seguinte) e aprovou 8 editais. A frota por cartão saiu. Mas um edital de geotecnologia foi aprovado com o motivo "Licenciamento de sistemas web e mobile", o que contradiz o próprio prompt. Ou seja, o LLM também erra, e a próxima amostra rotulada precisa medir isso.
+- **Os 100% do conjunto rotulado não provam nada sozinhos.** As regras foram escritas olhando esses 40 exemplos. No dia real, o filtro aprovou 15 de 3.027 editais, e a maioria era licença de software pronto, SaaS ou gestão de frota por cartão.
+- **O ajuste corrigiu categorias, não editais:** licença e SaaS viraram veto e o prefixo da plataforma (como "[Portal de Compras Públicas]") passou a ser removido antes da pontuação. Os 80% são otimistas, porque o ajuste veio depois de ver parte desses editais.
+- **O LLM também erra.** Tirou a frota por cartão, mas aprovou um edital de geotecnologia com o motivo "Licenciamento de sistemas web e mobile", contra o próprio prompt. O `gpt-oss-120b` variou entre 66,7% e 100% de precisão no mesmo conjunto, por isso escolhi o `qwen`, que se manteve estável.
+- **A evidência de recall é pequena e o gabarito é de uma pessoa só.** A amostra pegou 10 dos 337 rejeitados com vocabulário de TI. Um contrato ambíguo (suporte, rede e desenvolvimento) derruba a precisão de 80% para 60% se for marcado como "não".
 
-**Como ler esses números:**
+## O que eu aprendi
 
-- **Os 100% no conjunto rotulado não provam nada sozinhos.** As regras foram escritas olhando esses 40 exemplos, então o filtro decorou o conjunto. Ele bateu 100% e 100% de primeira, e por isso mesmo não dava para confiar.
-- **O dia real mostrou o tamanho do problema.** Rodando no PNCP de verdade, o filtro aprovou 15 de 3.027 editais, e a maioria era licença de software pronto, SaaS ou gestão de frota por cartão. Os editais reais têm armadilhas que o conjunto rotulado não tem. Por exemplo, alguns órgãos começam o texto com "[Portal de Compras Públicas] -", e a palavra "portal" fazia um edital de hidrojateamento parecer site.
-- **O ajuste corrigiu categorias, não editais.** Licença e SaaS viraram veto, "fornecimento de sistema" virou exclusão e o prefixo da plataforma passou a ser removido antes da pontuação. Os 80% são otimistas, porque o ajuste foi feito depois de ver parte desses editais. Ainda falta medir numa amostra nova.
-- **O recall real tem pouca evidência.** A amostra pegou 10 aprovados e 10 dos 337 rejeitados que tinham vocabulário de TI (sistema, software, site...). Não achar nenhum relevante entre esses 10 não garante que não haja outros nos 327 restantes.
-- **O LLM tirou o falso positivo que as regras não conseguiam tirar**: a gestão de frota por cartão, que cita "aplicativos móveis". Mas são 20 editais, e a diferença é de um item. Outro modelo gratuito testado, o `gpt-oss-120b`, variou entre 66,7% e 100% de precisão no mesmo conjunto, com o mesmo prompt. Por isso o modelo escolhido foi o que se manteve estável.
-- **O gabarito é de uma pessoa só.** A rotulagem foi feita às cegas, sem ver o que o filtro achou, mas uma única vez e com objetos ambíguos de verdade. Exemplo: um contrato de TI que mistura suporte, rede e desenvolvimento. Se esse item for marcado como "não", a precisão cai para 30% antes do ajuste e 60% depois.
+- **Conjunto pequeno engana.** Só o dia real mostrou as armadilhas do edital de verdade.
+- **O LLM funciona melhor como segunda etapa.** As regras, que são baratas, reduzem cerca de 3.000 editais a uns 350 candidatos, e o LLM julga só esses. É isso que cabe no plano gratuito.
+- **Idempotência vale mais que lógica de recuperação.** Se o envio falhar, nada é gravado, e a próxima execução refaz tudo.
 
 ## Como rodar
 
@@ -153,6 +106,8 @@ Configuração (no `.env` ou em Settings → Variables do repositório):
 | `LLM_MODEL` | `qwen/qwen3.8-27b` | modelo usado na classificação |
 
 Para o job agendado, cadastre `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` e `API_KEY` (chave gratuita em console.groq.com) em Settings → Secrets and variables → Actions. Para disparar na hora, use Actions → Radar diario → Run workflow.
+
+Pastas: `src/` (código, um módulo por etapa do fluxo), `tests/` (Vitest, um arquivo por módulo), `scripts/` (avaliação e gravação de fixtures), `data/` (40 objetos rotulados) e `avaliacao/` (amostra real rotulada).
 
 ## Limitações e próximos passos
 
