@@ -31,6 +31,11 @@ Motivo: Prestação de serviços de site
 Ver no PNCP
 ```
 
+Resumo real recebido no Telegram na execução de 26/10/2026:
+
+![Resumo no Telegram, parte 1](docs/telegram-resumo-1.png)
+![Resumo no Telegram, parte 2](docs/telegram-resumo-2.png)
+
 ## Arquitetura
 
 ```
