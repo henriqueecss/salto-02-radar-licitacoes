@@ -8,6 +8,7 @@ coverage/
 # arquivos internos de trabalho
 CLAUDE.md
 PROMPT_INICIAL.md
+ESTUDO.md
 .claude/
 
 # estado local do radar (no Actions ele vive na branch state)
