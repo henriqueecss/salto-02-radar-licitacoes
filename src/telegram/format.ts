@@ -5,6 +5,9 @@ export const TELEGRAM_LIMIT = 4096;
 const MAX_OBJETO = 350;
 const MAX_MOTIVO = 200;
 const URGENT_DAYS = 3;
+// Acima disso o edital costuma exigir atestados e estrutura que uma software house pequena nao tem.
+// So rotula e manda para o fim: o valor estimado e opiniao do orgao e nao exclui nada.
+export const HIGH_VALUE = 5_000_000;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 const money = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
@@ -30,12 +33,15 @@ function formatPrazo(e: Edital, now: Date): string {
   return `Encerra: ${dateTimeFmt.format(e.encerramento).replace(",", "")}${urgent}`;
 }
 
+const isHighValue = (e: Edital) => (e.valorEstimado ?? 0) >= HIGH_VALUE;
+
 function formatItem({ edital: e, motivo }: Scored, index: number, now: Date): string {
   const valor = e.valorEstimado === null ? "sigiloso ou não informado" : money.format(e.valorEstimado);
+  const porte = isHighValue(e) ? " <b>[porte alto]</b>" : "";
   return [
     `<b>${index}. ${escapeHtml(truncate(e.objeto, MAX_OBJETO))}</b>`,
     `${escapeHtml(e.orgao)} · ${escapeHtml(e.municipio)}/${escapeHtml(e.uf)}`,
-    `${escapeHtml(e.modalidade)} · Valor estimado: ${valor}`,
+    `${escapeHtml(e.modalidade)} · Valor estimado: ${valor}${porte}`,
     formatPrazo(e, now),
     ...(motivo ? [`Motivo: ${escapeHtml(truncate(motivo, MAX_MOTIVO))}`] : []),
     `<a href="${escapeHtml(e.link)}">Ver no PNCP</a>`,
@@ -52,7 +58,9 @@ function header(now: Date, total: number, part?: [number, number]): string {
 export function buildMessages(items: Scored[], now: Date): string[] {
   if (items.length === 0) return [`${header(now, 0).split("\n")[0]}\nNenhum edital novo hoje.`];
 
-  const sorted = [...items].sort((a, b) => b.score - a.score);
+  const sorted = [...items].sort(
+    (a, b) => Number(isHighValue(a.edital)) - Number(isHighValue(b.edital)) || b.score - a.score,
+  );
   const blocks = sorted.map((item, i) => formatItem(item, i + 1, now));
   const separator = "\n\n";
   const budget = TELEGRAM_LIMIT - header(now, items.length, [999, 999]).length - separator.length;

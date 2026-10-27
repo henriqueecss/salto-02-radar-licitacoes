@@ -78,6 +78,33 @@ describe("buildMessages", () => {
     expect(msg.indexOf("alto")).toBeLessThan(msg.indexOf("baixo"));
   });
 
+  it("marca porte alto a partir de R$ 5 milhoes, sem esconder o edital", () => {
+    const [msg = ""] = buildMessages([item(1, { valorTotalEstimado: 13100481.34 })], now);
+    expect(msg).toContain("[porte alto]");
+    expect(plain(msg)).toContain("R$ 13.100.481,34");
+  });
+
+  it("nao marca porte alto abaixo do limite nem sem valor", () => {
+    const [abaixo = ""] = buildMessages([item(1, { valorTotalEstimado: 4999999 })], now);
+    const [sigiloso = ""] = buildMessages([item(1, { valorTotalEstimado: 0 })], now);
+    expect(abaixo).not.toContain("porte alto");
+    expect(sigiloso).not.toContain("porte alto");
+  });
+
+  it("deixa os de porte alto por ultimo, mesmo com pontuacao maior", () => {
+    const [msg = ""] = buildMessages(
+      [
+        item(1, { objetoCompra: "gigante", valorTotalEstimado: 271899111.48 }, 9),
+        item(2, { objetoCompra: "pequeno", valorTotalEstimado: 45000 }, 3),
+        item(3, { objetoCompra: "medio", valorTotalEstimado: 800000 }, 6),
+      ],
+      now,
+    );
+    expect(msg.indexOf("medio")).toBeLessThan(msg.indexOf("gigante"));
+    expect(msg.indexOf("pequeno")).toBeLessThan(msg.indexOf("gigante"));
+    expect(msg.indexOf("medio")).toBeLessThan(msg.indexOf("pequeno"));
+  });
+
   it("divide em mensagens de ate 4096 caracteres sem cortar edital e numera as partes", () => {
     const longText = "Desenvolvimento de sistema web ".repeat(30);
     const items = Array.from({ length: 60 }, (_, i) => item(i + 1, { objetoCompra: `#${i + 1} ${longText}` }));
