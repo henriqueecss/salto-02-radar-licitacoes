@@ -1,13 +1,18 @@
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, expect, it } from "vitest";
 import { normalizeContratacao } from "../src/pncp/normalize.ts";
 import { openStore } from "../src/store/db.ts";
 import { rawContratacao } from "./helpers.ts";
 
+const objeto = (seq: number) => `Desenvolvimento de sistema web para a prefeitura, lote ${seq}`;
+
 const edital = (seq: number) =>
-  normalizeContratacao(rawContratacao({ numeroControlePNCP: `18338152000164-1-${String(seq).padStart(6, "0")}/2026` }));
+  normalizeContratacao(
+    rawContratacao({ numeroControlePNCP: `18338152000164-1-${String(seq).padStart(6, "0")}/2026`, objetoCompra: objeto(seq) }),
+  );
 
 const dirs: string[] = [];
 afterEach(() => {
@@ -87,5 +92,52 @@ describe("store", () => {
     const store = openStore(":memory:");
     expect(store.filterUnseen([edital(1), edital(1)])).toHaveLength(1);
     store.close();
+  });
+
+  describe("mesmo edital republicado com outro id", () => {
+    const original = edital(1);
+    const republished = normalizeContratacao(
+      rawContratacao({
+        numeroControlePNCP: "18338152000164-1-000002/2026",
+        objetoCompra: `[Portal de Compras Públicas] - ${objeto(1).toUpperCase()}`,
+      }),
+    );
+
+    it("fica so um na mesma coleta", () => {
+      const store = openStore(":memory:");
+      expect(store.filterUnseen([original, republished]).map((e) => e.id)).toEqual([original.id]);
+      store.close();
+    });
+
+    it("nao e reenviado depois que o primeiro foi enviado", () => {
+      const store = openStore(":memory:");
+      store.markSent([{ edital: original, score: 6 }], new Date("2026-10-23T11:00:00Z"));
+      expect(store.filterUnseen([republished])).toHaveLength(0);
+      store.close();
+    });
+
+    it("em banco criado antes da chave, reconhece os editais ja enviados", () => {
+      const dir = mkdtempSync(join(tmpdir(), "radar-"));
+      dirs.push(dir);
+      const path = join(dir, "radar.db");
+
+      const legacy = new DatabaseSync(path);
+      legacy.exec(`
+        CREATE TABLE editais (
+          id TEXT PRIMARY KEY, objeto TEXT NOT NULL, orgao TEXT NOT NULL, municipio TEXT NOT NULL,
+          uf TEXT NOT NULL, modalidade TEXT NOT NULL, valor_estimado REAL, encerramento TEXT,
+          link TEXT NOT NULL, score INTEGER NOT NULL, sent_at TEXT NOT NULL
+        );
+      `);
+      legacy
+        .prepare("INSERT INTO editais VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+        .run(original.id, original.objeto, original.orgao, original.municipio, original.uf, original.modalidade, original.valorEstimado, null, original.link, 6, "2026-10-22T11:00:00Z");
+      legacy.close();
+
+      const store = openStore(path);
+      expect(store.filterUnseen([republished])).toHaveLength(0);
+      expect(store.count()).toBe(1);
+      store.close();
+    });
   });
 });

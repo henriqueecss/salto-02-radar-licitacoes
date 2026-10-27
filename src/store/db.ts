@@ -1,6 +1,7 @@
 import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { DatabaseSync } from "node:sqlite";
+import { duplicateKey } from "../filter/duplicates.ts";
 import type { Verdict } from "../llm/classify.ts";
 import type { Edital } from "../pncp/normalize.ts";
 
@@ -16,7 +17,8 @@ const SCHEMA = `
     encerramento TEXT,
     link TEXT NOT NULL,
     score INTEGER NOT NULL,
-    sent_at TEXT NOT NULL
+    sent_at TEXT NOT NULL,
+    duplicate_key TEXT
   );
   CREATE TABLE IF NOT EXISTS classificacoes (
     id TEXT PRIMARY KEY,
@@ -38,16 +40,35 @@ export type Store = {
   close(): void;
 };
 
+// O estado vive numa branch e sobrevive a deploys: um banco criado antes da chave ganha a coluna
+// e os editais ja enviados passam a ser reconhecidos como duplicata.
+function addDuplicateKey(db: DatabaseSync): void {
+  const columns = db.prepare("PRAGMA table_info(editais)").all() as { name: string }[];
+  if (!columns.some((c) => c.name === "duplicate_key")) {
+    db.exec("ALTER TABLE editais ADD COLUMN duplicate_key TEXT");
+    const rows = db.prepare("SELECT id, objeto, orgao, valor_estimado FROM editais").all() as {
+      id: string;
+      objeto: string;
+      orgao: string;
+      valor_estimado: number | null;
+    }[];
+    const update = db.prepare("UPDATE editais SET duplicate_key = ? WHERE id = ?");
+    for (const r of rows) update.run(duplicateKey({ orgao: r.orgao, objeto: r.objeto, valorEstimado: r.valor_estimado }), r.id);
+  }
+  db.exec("CREATE INDEX IF NOT EXISTS idx_editais_duplicate_key ON editais (duplicate_key)");
+}
+
 export function openStore(path: string): Store {
   if (path !== ":memory:") mkdirSync(dirname(path), { recursive: true });
   const db = new DatabaseSync(path);
   db.exec(SCHEMA);
+  addDuplicateKey(db);
 
-  const exists = db.prepare("SELECT 1 FROM editais WHERE id = ?");
+  const exists = db.prepare("SELECT 1 FROM editais WHERE id = ? OR duplicate_key = ?");
   const insert = db.prepare(`
     INSERT OR IGNORE INTO editais
-      (id, objeto, orgao, municipio, uf, modalidade, valor_estimado, encerramento, link, score, sent_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      (id, objeto, orgao, municipio, uf, modalidade, valor_estimado, encerramento, link, score, sent_at, duplicate_key)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
   const selectVerdict = db.prepare("SELECT relevante, motivo FROM classificacoes WHERE id = ?");
   const upsertVerdict = db.prepare(`
@@ -69,8 +90,10 @@ export function openStore(path: string): Store {
     filterUnseen(editais) {
       const seen = new Set<string>();
       return editais.filter((e) => {
-        if (seen.has(e.id) || exists.get(e.id)) return false;
+        const key = duplicateKey(e);
+        if (seen.has(e.id) || seen.has(key) || exists.get(e.id, key)) return false;
         seen.add(e.id);
+        seen.add(key);
         return true;
       });
     },
@@ -89,6 +112,7 @@ export function openStore(path: string): Store {
             e.link,
             score,
             sentAt.toISOString(),
+            duplicateKey(e),
           );
         }
       });

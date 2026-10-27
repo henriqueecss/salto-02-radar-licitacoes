@@ -79,6 +79,25 @@ describe("runRadar", () => {
     expect(d.store.count()).toBe(0);
   });
 
+  it("o mesmo edital publicado duas vezes chega uma vez so", async () => {
+    const original = rawContratacao({
+      numeroControlePNCP: "19193527000108-1-000055/2026",
+      objetoCompra: "Manutenção evolutiva do sistema web e-Cidade",
+      valorTotalEstimado: 13100481.34,
+    });
+    const republished = rawContratacao({
+      numeroControlePNCP: "19193527000108-1-000056/2026",
+      objetoCompra: "[Portal de Compras Públicas] - MANUTENÇÃO EVOLUTIVA DO SISTEMA WEB E-CIDADE",
+      valorTotalEstimado: 13100481.34,
+    });
+    const d = deps({ fetchContratacoes: vi.fn(async () => [original, republished]) });
+    const result = await runRadar(d);
+
+    expect(result.novos).toBe(1);
+    expect(d.store.count()).toBe(1);
+    expect(vi.mocked(d.send).mock.calls[0]?.[0]?.[0]).toContain("1 edital novo");
+  });
+
   it("em modo dry-run imprime em vez de gravar", async () => {
     const d = deps({ dryRun: true });
     await runRadar(d);
