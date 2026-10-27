@@ -84,6 +84,14 @@ describe("buildMessages", () => {
     expect(plain(msg)).toContain("R$ 13.100.481,34");
   });
 
+  it("avisa quando o objeto indica trabalho presencial, sem esconder o edital", () => {
+    const [msg = ""] = buildMessages([item(1, { objetoCompra: "Manutenção de sistema com técnico residente" })], now);
+    expect(msg).toContain("[presencial]");
+    expect(msg).toContain("técnico residente");
+    const [remoto = ""] = buildMessages([item(1)], now);
+    expect(remoto).not.toContain("presencial");
+  });
+
   it("nao marca porte alto abaixo do limite nem sem valor", () => {
     const [abaixo = ""] = buildMessages([item(1, { valorTotalEstimado: 4999999 })], now);
     const [sigiloso = ""] = buildMessages([item(1, { valorTotalEstimado: 0 })], now);

@@ -1,3 +1,4 @@
+import { mentionsOnSite } from "../filter/onsite.ts";
 import type { Edital } from "../pncp/normalize.ts";
 import type { Scored } from "../store/db.ts";
 
@@ -37,11 +38,14 @@ const isHighValue = (e: Edital) => (e.valorEstimado ?? 0) >= HIGH_VALUE;
 
 function formatItem({ edital: e, motivo }: Scored, index: number, now: Date): string {
   const valor = e.valorEstimado === null ? "sigiloso ou não informado" : money.format(e.valorEstimado);
-  const porte = isHighValue(e) ? " <b>[porte alto]</b>" : "";
+  const tags = [isHighValue(e) ? "[porte alto]" : "", mentionsOnSite(e.objeto) ? "[presencial]" : ""]
+    .filter(Boolean)
+    .map((t) => ` <b>${t}</b>`)
+    .join("");
   return [
     `<b>${index}. ${escapeHtml(truncate(e.objeto, MAX_OBJETO))}</b>`,
     `${escapeHtml(e.orgao)} · ${escapeHtml(e.municipio)}/${escapeHtml(e.uf)}`,
-    `${escapeHtml(e.modalidade)} · Valor estimado: ${valor}${porte}`,
+    `${escapeHtml(e.modalidade)} · Valor estimado: ${valor}${tags}`,
     formatPrazo(e, now),
     ...(motivo ? [`Motivo: ${escapeHtml(truncate(motivo, MAX_MOTIVO))}`] : []),
     `<a href="${escapeHtml(e.link)}">Ver no PNCP</a>`,
