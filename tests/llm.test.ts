@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it, vi } from "vitest";
 import type { RetryOptions } from "../src/http.ts";
-import { buildRequest, classifyAll, MAX_OUTPUT_TOKENS, parseVerdicts, type LlmConfig } from "../src/llm/classify.ts";
+import { buildRequest, classifyAll, MAX_OUTPUT_TOKENS, parseVerdicts, SYSTEM_PROMPT, type LlmConfig } from "../src/llm/classify.ts";
 
 const config: LlmConfig = { apiKey: "chave-de-teste", baseUrl: "https://llm.test/v1", model: "modelo-x" };
 
@@ -31,6 +31,23 @@ const sentObjetos = (call: Parameters<typeof fetch>) => {
   const body = JSON.parse(String(call[1]?.body));
   return JSON.parse(body.messages[1].content) as { id: string; objeto: string }[];
 };
+
+describe("SYSTEM_PROMPT", () => {
+  // Erros vistos em producao em 26 e 27/10/2026; o efeito real e medido com `npm run evaluate -- <csv> --llm`.
+  it("deixa fora operacao de infraestrutura de TIC e consultoria sem software", () => {
+    expect(SYSTEM_PROMPT).toMatch(/infraestrutura de TIC/);
+    expect(SYSTEM_PROMPT).toMatch(/consultoria/i);
+    expect(SYSTEM_PROMPT).toMatch(/LGPD/);
+  });
+
+  it("aceita infraestrutura quando o texto pede desenvolvimento ou evolucao de software", () => {
+    expect(SYSTEM_PROMPT).toMatch(/a menos que peça desenvolvimento ou evolução de software/);
+  });
+
+  it("mantem relevante a evolucao de sistema que o orgao ja usa", () => {
+    expect(SYSTEM_PROMPT).toMatch(/sistema que o órgão já usa/);
+  });
+});
 
 describe("buildRequest", () => {
   it("manda o perfil da empresa no sistema e os objetos com ids curtos", () => {

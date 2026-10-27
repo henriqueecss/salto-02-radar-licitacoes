@@ -59,6 +59,8 @@ A meta era **recall de 100%** (nenhuma oportunidade perdida) e **precisão de pe
 | 20 editais reais de 23/10/2026 | regras antes do ajuste | 100% (4/4) | **40%** (4/10) |
 | mesmos 20 editais | regras depois do ajuste | 100% (4/4) | 80% (4/5) |
 | mesmos 20 editais | regras + LLM (`qwen/qwen3.8-27b`) | 100% (4/4) | 100% (4/4) |
+| 7 editais reais enviados em 26 e 27/10/2026 | regras + LLM, prompt anterior | 60% (3/5) | 75% (3/4) |
+| mesmos 7 editais | regras + LLM, prompt ajustado | 100% (5/5) | 100% (5/5) |
 
 O resultado com LLM se repetiu em quatro execuções. Como ler esses números:
 
@@ -66,6 +68,7 @@ O resultado com LLM se repetiu em quatro execuções. Como ler esses números:
 - **O ajuste corrigiu categorias, não editais:** licença e SaaS viraram veto e o prefixo da plataforma (como "[Portal de Compras Públicas]") passou a ser removido antes da pontuação. Os 80% são otimistas, porque o ajuste veio depois de ver parte desses editais.
 - **O LLM também erra.** Tirou a frota por cartão, mas aprovou um edital de geotecnologia com o motivo "Licenciamento de sistemas web e mobile", contra o próprio prompt. O `gpt-oss-120b` variou entre 66,7% e 100% de precisão no mesmo conjunto, por isso escolhi o `qwen`, que se manteve estável.
 - **A evidência de recall é pequena e o gabarito é de uma pessoa só.** A amostra pegou 10 dos 337 rejeitados com vocabulário de TI. Um contrato ambíguo (suporte, rede e desenvolvimento) derruba a precisão de 80% para 60% se for marcado como "não".
+- **O prompt foi ajustado olhando os 7 editais de 26 e 27/10**, então esses 100% também são otimistas. A medida honesta vem da próxima amostra, que o prompt ainda não viu.
 
 ## O que eu aprendi
 
@@ -107,7 +110,7 @@ Configuração (no `.env` ou em Settings → Variables do repositório):
 
 Para o job agendado, cadastre `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` e `API_KEY` (chave gratuita em console.groq.com) em Settings → Secrets and variables → Actions. Para disparar na hora, use Actions → Radar diario → Run workflow.
 
-Pastas: `src/` (código, um módulo por etapa do fluxo), `tests/` (Vitest, um arquivo por módulo), `scripts/` (avaliação e gravação de fixtures), `data/` (40 objetos rotulados) e `avaliacao/` (amostra real rotulada).
+Pastas: `src/` (código, um módulo por etapa do fluxo), `tests/` (Vitest, um arquivo por módulo), `scripts/` (avaliação e gravação de fixtures), `data/` (40 objetos rotulados) e `avaliacao/` (amostras reais rotuladas).
 
 ## Limitações e próximos passos
 

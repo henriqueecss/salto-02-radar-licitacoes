@@ -69,13 +69,15 @@ Um edital é aprovado com 3 pontos ou mais. A pontuação também ordena o resum
 
 ## 5. Formato da mensagem
 
-**Escolha:** um resumo por dia, ordenado por pontuação. Cada edital mostra objeto (cortado em 350 caracteres), órgão, município, modalidade, valor ("sigiloso ou não informado" quando vem zero), prazo e link para a página do edital no PNCP. Editais que encerram em até 3 dias recebem a marca "[encerra em breve]". Quando não há nada novo, o bot avisa "Nenhum edital novo hoje", o que também prova que o job rodou.
+**Escolha:** um resumo por dia, ordenado por pontuação. Cada edital mostra objeto (cortado em 350 caracteres), órgão, município, modalidade, valor ("sigiloso ou não informado" quando vem zero), prazo e link para a página do edital no PNCP. Editais que encerram em até 3 dias recebem a marca "[encerra em breve]". Valor estimado a partir de R$ 5 milhões recebe "[porte alto]" e vai para o fim do resumo, porque contratos desse tamanho costumam exigir atestados e estrutura que uma software house pequena não tem. Quando não há nada novo, o bot avisa "Nenhum edital novo hoje", o que também prova que o job rodou.
 
 **Limite do Telegram:** quando o resumo passa de 4.096 caracteres, ele é dividido entre editais, nunca no meio de um, e as partes são numeradas (1/2, 2/2). Entre uma mensagem e outra há uma pausa de 1,1 s, e um 429 do Telegram é tratado respeitando o `retry_after`.
 
 **HTML em vez de MarkdownV2:** o MarkdownV2 exige escapar 18 caracteres e quebra fácil com textos de edital; o HTML só exige escapar `<`, `>`, `&` e aspas.
 
 **Descartada:** uma mensagem por edital. Daria para encaminhar cada edital sozinho, mas num dia cheio vira enxurrada e esbarra no limite de envio do Telegram.
+
+**Porte alto só rotula:** um teto de valor (`RADAR_VALOR_MAXIMO`) tiraria o edital do resumo com base numa estimativa que o órgão pode errar ou esconder. Com o rótulo, o edital continua visível e o valor decide quem olha primeiro.
 
 ## 6. LLM como segunda etapa do filtro
 
@@ -112,6 +114,10 @@ Um edital é aprovado com 3 pontos ou mais. A pontuação também ordena o resum
 - LLM só nos aprovados pelas regras: mais barato, mas não recupera nenhum edital que as regras perderam.
 
 ## Outras decisões
+
+- **Mesmo edital, dois ids:** em 27/10/2026 o resumo trouxe o mesmo edital duas vezes, um com o prefixo "[Portal de Compras Públicas]" e outro sem, com ids e encerramentos (09:00 e 08:59) diferentes. Agora órgão, objeto sem prefixo e valor, normalizados (sem acento, caixa e pontuação), formam uma chave guardada no SQLite. Vale dentro da mesma coleta e entre execuções, e bancos antigos recebem a coluna e o histórico na abertura. O risco é descartar dois editais legítimos de mesmo órgão, objeto e valor, que é raro e aceitável para quem prioriza não repetir.
+- **Ajuste do prompt (27/10/2026):** a empresa desenvolve software, web, aplicativos e automações, não presta infraestrutura e quer serviços que não exijam comparecimento. O LLM aprovou operação de infraestrutura de TIC (TJMG, R$ 181 milhões) e consultoria de LGPD, e rejeitou, numa rodada, o e-Cidade por "sistema pronto licenciado", que o texto não diz. O prompt passou a excluir infraestrutura de TIC (a menos que o texto peça desenvolvimento ou evolução de software) e consultoria que não entrega software, e a incluir manutenção evolutiva de sistema que o órgão já usa. Uma primeira versão da cláusula de objeto misto trouxe de volta o edital de geotecnologia da amostra real (100% para 80% de precisão); ela foi estreitada para "parte central do contrato, não item acessório de engenharia ou serviço jurídico". A fronteira entre o GeoBIM e o SIG de Presidente Olegário é fina, e o ajuste foi feito olhando esses casos. O filtro não precisa acertar 100%: um falso positivo custa a leitura, e o que ele deve cortar é o que claramente não é TI ou está na lista do que a empresa não presta.
+- **Presencial só rotula:** o edital que indica trabalho presencial continua no resumo com o aviso "[presencial]", porque a empresa prefere decidir lendo o edital. A detecção olha só o texto do objeto (presencial, in loco, posto de trabalho, técnico residente, operação assistida), e a exigência costuma estar no termo de referência, que o radar não lê. O rótulo é uma ajuda, não uma garantia.
 
 - **Prazo de mentira:** quando abertura e encerramento caem em 31/12 do mesmo dia, o prazo é tratado como "a confirmar no edital", e não como data real. Prazo ausente ou suspeito nunca exclui um edital.
 - **Valor:** zero ou ausente vira `null`, aparece como "sigiloso ou não informado" e nunca é excluído pela faixa de valor.
